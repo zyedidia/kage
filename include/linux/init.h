@@ -134,6 +134,8 @@ struct file_system_type;
 
 /* Defined in init/main.c */
 extern int do_one_initcall(initcall_t fn);
+struct kage;
+extern int do_one_initcall2(struct kage *kage, initcall_t fn);
 extern char __initdata boot_command_line[];
 extern char *saved_command_line;
 extern unsigned int saved_command_line_len;

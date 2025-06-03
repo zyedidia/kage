@@ -29,3 +29,7 @@ obj-$(CONFIG_SECURITY_IPE)		+= ipe/
 
 # Object integrity file lists
 obj-$(CONFIG_INTEGRITY)			+= integrity/
+
+# Kage
+obj-$(CONFIG_SECURITY_KAGE)			+= kage/
+

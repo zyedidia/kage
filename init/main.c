@@ -104,6 +104,7 @@
 #include <linux/pidfs.h>
 #include <linux/ptdump.h>
 #include <linux/time_namespace.h>
+#include <linux/kage.h>
 #include <net/net_namespace.h>
 
 #include <asm/io.h>
@@ -1393,7 +1394,11 @@ static inline void do_trace_initcall_level(const char *level)
 }
 #endif /* !TRACEPOINTS_ENABLED */
 
-int __init_or_module do_one_initcall(initcall_t fn)
+int __init_or_module do_one_initcall(initcall_t fn) {
+        return do_one_initcall2(NULL, fn);
+}
+
+int __init_or_module do_one_initcall2(struct kage *kage, initcall_t fn)
 {
 	int count = preempt_count();
 	char msgbuf[64];
@@ -1403,7 +1408,12 @@ int __init_or_module do_one_initcall(initcall_t fn)
 		return -EPERM;
 
 	do_trace_initcall_start(fn);
-	ret = fn();
+        if (kage) {
+                ret = kage_call_init(kage, fn);
+        }
+        else {
+                ret = fn();
+        }
 	do_trace_initcall_finish(fn, ret);
 
 	msgbuf[0] = 0;

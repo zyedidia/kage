@@ -95,7 +95,7 @@ struct load_info {
 		unsigned int vers_ext_name;
 	} index;
 #ifdef CONFIG_SECURITY_KAGE
-        int is_lfi;
+        int lfi_offs;
 #endif
 
 };

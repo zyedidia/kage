@@ -2785,7 +2785,8 @@ static int move_module(struct module *mod, struct load_info *info)
 #ifdef CONFIG_SECURITY_KAGE
 	struct kage * kage = 0;
 
-	if (info->is_lfi) {
+        // FIXME: ifdef 
+	if (info->lfi_offs) {
 		kage = kage_create();
 		if (!kage) {
 			return PTR_ERR(kage);
@@ -2880,6 +2881,10 @@ static int move_module(struct module *mod, struct load_info *info)
 		shdr->sh_addr = (unsigned long)dest;
 		pr_debug("\t0x%lx 0x%.8lx %s\n", (long)shdr->sh_addr,
 			 (long)shdr->sh_size, info->secstrings + shdr->sh_name);
+                if (shdr->sh_offset == info->lfi_offs) {
+                        // FIXME: hacky
+                        kage->lfi_sec_addr = shdr->sh_addr;
+                }
 	}
 
 	return 0;
@@ -2996,8 +3001,9 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
 	// FIXME: find a better indicator for LFI-compiled
 	ndx = find_sec(info, "__lfi");
 	if (ndx) {
+                //FIXME: validate that __lfi is executable
 		pr_info("Loadable module is compiled LFI\n");
-		info->is_lfi = true;
+		info->lfi_offs = info->sechdrs[ndx].sh_offset;
 	}
 #endif
 

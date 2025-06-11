@@ -1383,7 +1383,8 @@ static void module_memory_free(struct module *mod, enum mod_mem_type type)
 static void free_mod_mem(struct module *mod)
 {
 	trace_android_vh_free_mod_mem(mod);
-	for_each_mod_mem_type(type) {
+	for_each_mod_mem_type(type)
+	{
 		struct module_memory *mod_mem = &mod->mem[type];
 
 		if (type == MOD_DATA)
@@ -1400,7 +1401,8 @@ static void free_mod_mem(struct module *mod)
 	}
 
 	/* MOD_DATA hosts mod, so free it at last */
-	lockdep_free_key_range(mod->mem[MOD_DATA].base, mod->mem[MOD_DATA].size);
+	lockdep_free_key_range(mod->mem[MOD_DATA].base,
+			       mod->mem[MOD_DATA].size);
 #ifdef CONFIG_SECURITY_KAGE
 	if (!mod->kage) {
 #endif
@@ -1410,6 +1412,8 @@ static void free_mod_mem(struct module *mod)
 		// This frees all the module memory
 		kage_free(mod->kage);
 	}
+#else
+	module_memory_free(mod->mem[MOD_DATA].base, MOD_DATA);
 #endif
 }
 

@@ -2809,7 +2809,7 @@ static int move_module(struct module *mod, struct load_info *info)
 			void *ptr;
 
 			mod->mem[type].size = PAGE_ALIGN(mod->mem[type].size);
-			ptr = kage_memory_alloc(kage, mod->mem[type].size, type);
+			ptr = kage_memory_alloc(kage, mod->mem[type].size, type, GFP_KERNEL);
 			kmemleak_not_leak(ptr);
 			if (!ptr) {
 				ret = -ENOMEM;

@@ -95,9 +95,8 @@ struct load_info {
 		unsigned int vers_ext_name;
 	} index;
 #ifdef CONFIG_SECURITY_KAGE
-        int lfi_offs;
+	int lfi_offs;
 #endif
-
 };
 
 enum mod_license {

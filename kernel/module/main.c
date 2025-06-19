@@ -837,7 +837,11 @@ SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
 	mutex_unlock(&module_mutex);
 	/* Final destruction now no one is using it. */
 	if (mod->exit != NULL)
+#ifdef CONFIG_SECURITY_KAGE
+		kage_call(mod->kage, mod->exit, 0, 0, 0, 0, 0, 0);
+#else
 		mod->exit();
+#endif
 	blocking_notifier_call_chain(&module_notify_list,
 				     MODULE_STATE_GOING, mod);
 	klp_module_going(mod);
@@ -2789,8 +2793,8 @@ static int move_module(struct module *mod, struct load_info *info)
 #ifdef CONFIG_SECURITY_KAGE
 	struct kage * kage = 0;
 
-	if (info->lfi_offs) {
-		kage = kage_create();
+	if (info->is_lfi) {
+		kage = kage_create(mod->name);
 		if (!kage) {
 			return PTR_ERR(kage);
 		}
@@ -2884,12 +2888,19 @@ static int move_module(struct module *mod, struct load_info *info)
 		shdr->sh_addr = (unsigned long)dest;
 		pr_debug("\t0x%lx 0x%.8lx %s\n", (long)shdr->sh_addr,
 			 (long)shdr->sh_size, info->secstrings + shdr->sh_name);
-                #ifdef CONFIG_SECURITY_KAGE
-                if (shdr->sh_offset == info->lfi_offs) {
-                        kage->kage_exit_addr = shdr->sh_addr;
-                }
-#endif
 	}
+#ifdef CONFIG_SECURITY_KAGE
+	const Elf_Shdr *symtab_shdr = &info->sechdrs[info->index.sym];
+	const Elf_Sym *syms = 
+		((void *)info->hdr + symtab_shdr->sh_offset);
+	const char *strtab = 
+		((void *)info->hdr + info->sechdrs[info->index.str].sh_offset);
+	const unsigned int num_syms = 
+		symtab_shdr->sh_size / sizeof(Elf_Sym);
+
+	kage_post_move(kage, info->sechdrs, info->hdr->e_shnum, 
+		       syms, num_syms, strtab);
+#endif
 
 	return 0;
 out_err:
@@ -3007,7 +3018,7 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
 	if (ndx) {
                 //FIXME: validate that __lfi is executable
 		pr_info("Loadable module is compiled LFI\n");
-		info->lfi_offs = info->sechdrs[ndx].sh_offset;
+		info->is_lfi = info->sechdrs[ndx].sh_offset;
 	}
 #endif
 

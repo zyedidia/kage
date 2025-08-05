@@ -2,11 +2,11 @@
 menu "Android"
 
 config ANDROID_BINDER_IPC
-	tristate "Android Binder IPC Driver"
+	bool "Android Binder IPC Driver"
 	depends on MMU
 	depends on NET
 	depends on EVENT_TRACING
-	default m
+	default n
 	help
 	  Binder is used in Android for both communication between processes,
 	  and remote method invocation.

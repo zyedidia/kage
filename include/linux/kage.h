@@ -12,6 +12,13 @@
 #define KAGE_GUEST_SIZE (4UL * 1024 * 1024 * 1024)
 
 /*
+ * Objects built for LFI are marked by the LFI toolchain with an ELF note whose
+ * owner is LFI (in a .note.LFI.ABI.<arch> section). The module loader uses
+ * this note to decide whether a module must be loaded into a kage sandbox.
+ */
+#define KAGE_LFI_NOTE_OWNER "LFI"
+
+/*
  * While object descriptors reserve 16 bits for the index, we limit the
  * actual number of objects to a smaller value to avoid excessive memory
  * allocation.

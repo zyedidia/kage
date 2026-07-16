@@ -3017,6 +3017,49 @@ static bool blacklisted(const char *module_name)
 }
 core_param(module_blacklist, module_blacklist, charp, 0400);
 
+#ifdef CONFIG_SECURITY_KAGE
+/*
+ * Objects built for LFI contain a .note.LFI.ABI.<arch> section. Scan the
+ * module's note sections for such a note to decide whether the module must be
+ * loaded into a kage sandbox.
+ */
+static bool module_elf_is_lfi(const struct load_info *info)
+{
+	unsigned int i;
+
+	for (i = 1; i < info->hdr->e_shnum; i++) {
+		const Elf_Shdr *shdr = &info->sechdrs[i];
+		const char *p, *end;
+
+		if (shdr->sh_type != SHT_NOTE)
+			continue;
+
+		/* Section bounds were already validated against info->len. */
+		p = (const char *)info->hdr + shdr->sh_offset;
+		end = p + shdr->sh_size;
+
+		while (end - p >= sizeof(struct elf_note)) {
+			const struct elf_note *nhdr = (const struct elf_note *)p;
+			const char *name = p + sizeof(*nhdr);
+			size_t namesz = ALIGN((size_t)nhdr->n_namesz, 4);
+			size_t descsz = ALIGN((size_t)nhdr->n_descsz, 4);
+
+			if (namesz + descsz > end - name)
+				break;
+
+			if (nhdr->n_namesz == sizeof(KAGE_LFI_NOTE_OWNER) &&
+			    memcmp(name, KAGE_LFI_NOTE_OWNER,
+				   sizeof(KAGE_LFI_NOTE_OWNER)) == 0)
+				return true;
+
+			p = name + namesz + descsz;
+		}
+	}
+
+	return false;
+}
+#endif
+
 static struct module *layout_and_allocate(struct load_info *info, int flags)
 {
 	struct module *mod;
@@ -3044,11 +3087,8 @@ static struct module *layout_and_allocate(struct load_info *info, int flags)
 	module_mark_ro_after_init(info->hdr, info->sechdrs, info->secstrings);
 
 #ifdef CONFIG_SECURITY_KAGE
-	// FIXME: find a better indicator for LFI-compiled
-	ndx = find_sec(info, "__lfi");
-	if (ndx) {
-                //FIXME: validate that __lfi is executable
-		pr_info("Loadable module is compiled LFI\n");
+	if (module_elf_is_lfi(info)) {
+		pr_info("%s: module is built for the LFI\n", info->name);
 		info->is_lfi = true;
 	}
 #endif

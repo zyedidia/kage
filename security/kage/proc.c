@@ -27,7 +27,7 @@ unsigned long lfi_proc_invoke(struct kage_proc *proc,
 			      unsigned long p0, unsigned long p1,
                               unsigned long p2, unsigned long p3,
                               unsigned long p4, unsigned long p5) {
-	pr_info("lfi_proc_invoke: starting guest function at 0x%lx\n",
+	kage_dbg("lfi_proc_invoke: starting guest function at 0x%lx\n",
 		proc->entry);
 
 	return lfi_asm_invoke(proc, p0, p1, p2, p3, p4, p5);

@@ -31,6 +31,11 @@
 #include "proc.h"
 #include "guards.h"
 
+/* Verbose kage tracing with kage_dbg. */
+bool kage_verbose;
+module_param(kage_verbose, bool, 0644);
+MODULE_PARM_DESC(kage_verbose, "Enable verbose kage tracing (per-call/per-symbol)");
+
 static_assert(offsetof(struct kage_proc, kstackp) == KAGE_PROC_KSTACKP_OFFS,
 	      "Inconsistency between proc.h and kage_asm.h");
 static_assert(offsetof(struct kage_proc, sstackp) == KAGE_PROC_SSTACKP_OFFS,
@@ -161,7 +166,7 @@ free_pages:
 cleanup:
 	if (do_lock)
 		spin_unlock_irqrestore(&kage->lock, irq_flags);
-	//pr_info("kmae 0x%lx - 0x%lx, page=%px\n", start, end, vmalloc_to_page((void *)start));
+	//kage_dbg("kmae 0x%lx - 0x%lx, page=%px\n", start, end, vmalloc_to_page((void *)start));
 	kfree(tmp_pages);
 	return ret;
 }
@@ -231,9 +236,9 @@ static int alloc_trampolines(struct kage *kage)
 	kage->h2g_tramp_data = (void *)((unsigned long)kage->h2g_tramp_text +
 			KAGE_H2G_TRAMP_REGION_SIZE);
 
-	pr_info("g2h trampoline text=0x%px, data=0x%px\n", kage->g2h_tramp_text,
+	kage_dbg("g2h trampoline text=0x%px, data=0x%px\n", kage->g2h_tramp_text,
 		kage->g2h_tramp_data);
-	pr_info("h2g trampoline text=0x%px, data=0x%px\n", kage->h2g_tramp_text,
+	kage_dbg("h2g trampoline text=0x%px, data=0x%px\n", kage->h2g_tramp_text,
 		kage->h2g_tramp_data);
 
 	return 0;
@@ -421,7 +426,7 @@ unsigned long kage_symbol_value(struct kage *kage, const char *name,
 	unsigned long ret = (unsigned long)kage->g2h_tramp_text +
 				kage->num_g2h_calls * KAGE_G2H_TRAMP_SIZE;
 	kage->g2h_calls[kage->num_g2h_calls++] = host_call;
-	pr_info(MODULE_NAME ": kage_symbol_value %s=%lx\n", name, ret);
+	kage_dbg(MODULE_NAME ": kage_symbol_value %s=%lx\n", name, ret);
 	return ret;
 }
 
@@ -692,7 +697,7 @@ void kage_memory_free(struct kage *kage, const void *vaddr)
                        __free_page(page);
        }
        vunmap_range((unsigned long)vaddr, (unsigned long)vaddr + size);
-       //pr_info("kmfr 0x%lx - 0x%lx\n", (unsigned long)vaddr, (unsigned long)vaddr + size);
+       //kage_dbg("kmfr 0x%lx - 0x%lx\n", (unsigned long)vaddr, (unsigned long)vaddr + size);
 }
 EXPORT_SYMBOL(kage_memory_free);
 
@@ -922,7 +927,7 @@ static int __init kagemodule_init(void)
 	vmalloc_end_addr = (unsigned long)VMALLOC_END;
 	vmalloc_size_bytes = vmalloc_end_addr - vmalloc_start_addr;
 
-	pr_info("kage_vmalloc_info: Vmalloc Area Size:     %lu bytes (%lu MB, %lu GB)\n",
+	kage_dbg("kage_vmalloc_info: Vmalloc Area Size:     %lu bytes (%lu MB, %lu GB)\n",
 		vmalloc_size_bytes, vmalloc_size_bytes / (1024 * 1024),
 		vmalloc_size_bytes / (1024 * 1024 * 1024));
 
@@ -1055,7 +1060,7 @@ int kage_post_relocation(struct kage *kage, struct module *mod,
 			 const Elf_Sym *symtab, unsigned int num_syms,
 			 const char *strtab)
 {
-	pr_info("%s started\n", __func__);
+	kage_dbg("%s started\n", __func__);
 	fill_trampolines(kage);
 	BUG_ON(kage->exit_addr - kage->base > KAGE_GUEST_SIZE);
 	int err = protect_trampolines(kage);
@@ -1066,13 +1071,13 @@ int kage_post_relocation(struct kage *kage, struct module *mod,
 	prepare_kunit_suites(mod);
 #endif
 
-	pr_info("%s finished with no error\n", __func__);
+	kage_dbg("%s finished with no error\n", __func__);
 	return 0;
 }
 
 struct kage *kage_create(const char *modname)
 {
-	pr_info("%s started\n", __func__);
+	kage_dbg("%s started\n", __func__);
 
 	struct kage *kage;
 	int err;
@@ -1088,7 +1093,7 @@ struct kage *kage_create(const char *modname)
 		return ERR_PTR(err);
 	}
 
-	pr_info("%s with base 0x%lx finished\n", __func__, kage->base);
+	kage_dbg("%s with base 0x%lx finished\n", __func__, kage->base);
 	return kage;
 }
 EXPORT_SYMBOL(kage_create);
@@ -1199,10 +1204,10 @@ unsigned long kage_call(struct kage *kage, void * fn,
 	unsigned long guest_shadow_stack_end =
 			(unsigned long)guest_shadow_stack + SCS_SIZE;
 
-	pr_info("kage_call: h2g call 0x%px from %pS, guest stack at %px-%lx\n", fn,
+	kage_dbg("kage_call: h2g call 0x%px from %pS, guest stack at %px-%lx\n", fn,
                 (void *)_RET_IP_, guest_stack, guest_stack_end - 1);
 	if (guest_shadow_stack)
-		pr_info("guest scs   at %px-%lx\n", guest_shadow_stack,
+		kage_dbg("guest scs   at %px-%lx\n", guest_shadow_stack,
 			guest_shadow_stack_end - 1);
 
 	// Shadow stacks grow up, so initialize ssp to the lowest address
@@ -1221,7 +1226,7 @@ unsigned long kage_call(struct kage *kage, void * fn,
 
 	rv = lfi_proc_invoke(lfiproc, p0, p1, p2, p3, p4, p5);
 
-	pr_info("kage_call: h2g call to 0x%px finished\n", fn);
+	kage_dbg("kage_call: h2g call to 0x%px finished\n", fn);
 cleanup:
 	set_memory_rw(guest_stack_end, PROC_DATA_SIZE >> PAGE_SHIFT);
 	kage_memory_free(kage, guest_shadow_stack);
@@ -1256,7 +1261,7 @@ void kage_destroy(struct kage *kage)
 	if (!kage)
 		return;
 
-	pr_info(MODULE_NAME ": destroying kage owner_id=%d\n", kage->owner_id);
+	kage_dbg(MODULE_NAME ": destroying kage owner_id=%d\n", kage->owner_id);
 
 	for (i = 0; i < kage->num_g2h_calls; i++)
 		kage_guard_destroy_g2h_call(kage->g2h_calls[i]);
@@ -1277,7 +1282,7 @@ void kage_destroy(struct kage *kage)
 		kages[kage->owner_id] = NULL;
 
 	kfree(kage);
-	pr_info(MODULE_NAME ": %s complete\n", __func__);
+	kage_dbg(MODULE_NAME ": %s complete\n", __func__);
 
 }
 EXPORT_SYMBOL(kage_destroy);
@@ -1286,7 +1291,7 @@ static void __exit kagemodule_exit(void)
 {
 	int i;
 
-	pr_info(MODULE_NAME ": Exiting\n");
+	kage_dbg(MODULE_NAME ": Exiting\n");
 	for (i = 0; i < MAX_GUESTS; i++) {
 		struct kage *kage = kages[i];
 

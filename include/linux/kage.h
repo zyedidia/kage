@@ -19,6 +19,22 @@
 #define KAGE_LFI_NOTE_OWNER "LFI"
 
 /*
+ * Verbose kage tracing, off by default. Per-call / per-symbol status messages
+ * are routed through kage_dbg(). Enable at boot with kage.kage_verbose=1, or at
+ * runtime: echo 1 > /sys/module/kage/parameters/kage_verbose
+ */
+#ifdef CONFIG_SECURITY_KAGE
+extern bool kage_verbose;
+#define kage_dbg(fmt, ...)					\
+	do {							\
+		if (kage_verbose)				\
+			pr_info(fmt, ##__VA_ARGS__);		\
+	} while (0)
+#else
+#define kage_dbg(fmt, ...) do { } while (0)
+#endif
+
+/*
  * While object descriptors reserve 16 bits for the index, we limit the
  * actual number of objects to a smaller value to avoid excessive memory
  * allocation.

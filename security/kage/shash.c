@@ -245,7 +245,7 @@ int guard_crypto_register_shash(struct kage_proc *proc,
 		sizeof(sh->alg.base.cra_driver_name));
 	sh->alg.base.cra_module = NULL; /* FIXME: refcount the guest module */
 
-	pr_info("kage: shadow shash '%s' (driver '%s') ctxsize=%u descsize=%u digestsize=%u\n",
+	kage_dbg("kage: shadow shash '%s' (driver '%s') ctxsize=%u descsize=%u digestsize=%u\n",
 		sh->alg.base.cra_name, sh->alg.base.cra_driver_name,
 		sh->ctxsize, sh->descsize, sh->digestsize);
 

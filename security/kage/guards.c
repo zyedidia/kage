@@ -230,7 +230,7 @@ static int guard_sig_precall(struct kage_proc *proc,
 			void *closure = kage_get_closure_over_with_spec(proc->kage, val, callback_spec);
 			if (IS_ERR(closure))
 				return PTR_ERR(closure);
-			pr_info("closure_over created at 0x%px for guest func "
+			kage_dbg("closure_over created at 0x%px for guest func "
 				"0x%lx (%s)", closure, val, host_call->name);
 
 			args->x[regnum] = (unsigned long)closure;

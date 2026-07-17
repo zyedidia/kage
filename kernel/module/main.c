@@ -2877,7 +2877,7 @@ static int move_module(struct module *mod, struct load_info *info)
 	}
 
 	/* Transfer each section which specifies SHF_ALLOC */
-	pr_info("Final section addresses for %s:\n", mod->name);
+	kage_dbg("Final section addresses for %s:\n", mod->name);
 	for (i = 0; i < info->hdr->e_shnum; i++) {
 		void *dest;
 		Elf_Shdr *shdr = &info->sechdrs[i];
@@ -2931,7 +2931,7 @@ static int move_module(struct module *mod, struct load_info *info)
 		 * minted official memory area.
 		 */
 		shdr->sh_addr = (unsigned long)dest;
-		pr_info("\t0x%lx 0x%.8lx %s\n", (long)shdr->sh_addr,
+		kage_dbg("\t0x%lx 0x%.8lx %s\n", (long)shdr->sh_addr,
 			 (long)shdr->sh_size, info->secstrings + shdr->sh_name);
 	}
 

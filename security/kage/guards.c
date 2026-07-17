@@ -343,6 +343,8 @@ unsigned long guard_sig(struct kage_proc *proc, struct kage_g2h_call *host_call,
  * it is a kmalloc variant)
  * NOTE: this array must be sorted by name (so bsearch works) */
 struct kage_g2h_call g2h_call_overrides[] = {
+	NAME_TO_GUARD_ENTRY(crypto_register_shash),
+	NAME_TO_GUARD_ENTRY(crypto_unregister_shash),
 	NAME_TO_GUARD_ENTRY(device_del),
 	NAME_TO_GUARD_ENTRY(device_unregister),
 	NAME_TO_GUARD_ENTRY(devm_kmalloc),

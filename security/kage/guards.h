@@ -5,6 +5,8 @@
 
 struct kage;
 
+struct kage_proc;
+
 struct kage_g2h_call {
 	const char *name;
 	unsigned long guard_func; // usually == *guard_sig or guard_sig_precall
@@ -21,5 +23,10 @@ struct kage_g2h_call *kage_guard_create_g2h_call(const char *name,
 void kage_guard_destroy_g2h_call(struct kage_g2h_call *call);
 unsigned long kage_guard_resolve_gvars(struct kage *kage, const char *name);
 void kage_guards_init(void);
+
+int guard_crypto_register_shash(struct kage_proc *proc,
+				struct kage_g2h_call *call, unsigned long g_alg);
+int guard_crypto_unregister_shash(struct kage_proc *proc,
+				  struct kage_g2h_call *call, unsigned long g_alg);
 
 #endif /* _KAGE_GUARDS_H */

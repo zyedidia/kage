@@ -836,12 +836,14 @@ SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
 
 	mutex_unlock(&module_mutex);
 	/* Final destruction now no one is using it. */
-	if (mod->exit != NULL)
+	if (mod->exit != NULL) {
 #ifdef CONFIG_SECURITY_KAGE
-		kage_call(mod->kage, mod->exit, 0, 0, 0, 0, 0, 0);
-#else
-		mod->exit();
+		if (mod->kage)
+			kage_call(mod->kage, mod->exit, 0, 0, 0, 0, 0, 0);
+		else
 #endif
+			mod->exit();
+	}
 	blocking_notifier_call_chain(&module_notify_list,
 				     MODULE_STATE_GOING, mod);
 	klp_module_going(mod);

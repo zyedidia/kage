@@ -662,7 +662,12 @@ int module_finalize(const Elf_Ehdr *hdr,
 
 	s = find_section(hdr, sechdrs, ".altinstructions");
 	if (s) {
-		ret = apply_alternatives_module((void *)s->sh_addr, s->sh_size);
+		bool is_kage = false;
+#ifdef CONFIG_SECURITY_KAGE
+		is_kage = me->kage != NULL;
+#endif
+		ret = apply_alternatives_module((void *)s->sh_addr, s->sh_size,
+						is_kage);
 		if (ret < 0) {
 			pr_err("module %s: error occurred when applying alternatives\n", me->name);
 			return ret;

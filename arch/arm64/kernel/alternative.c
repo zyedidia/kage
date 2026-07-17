@@ -141,7 +141,7 @@ static noinstr void clean_dcache_range_nopatch(u64 start, u64 end)
 }
 
 static int __apply_alternatives(const struct alt_region *region,
-				bool is_module,
+				bool is_module, bool is_kage,
 				unsigned long *cpucap_mask)
 {
 	struct alt_instr *alt;
@@ -169,7 +169,14 @@ static int __apply_alternatives(const struct alt_region *region,
 
 		if (ALT_HAS_CB(alt)) {
 			alt_cb  = ALT_REPL_PTR(alt);
-			if (is_module && !core_kernel_text((unsigned long)alt_cb))
+			/*
+			 * Kage modules resolve alternative callbacks to a
+			 * guest-region load-trampoline (never core_kernel_text)
+			 * that forwards to the already-resolved kernel callback,
+			 * so skip this check for them.
+			 */
+			if (is_module && !is_kage &&
+			    !core_kernel_text((unsigned long)alt_cb))
 				return -ENOEXEC;
 		} else {
 			alt_cb = patch_alternative;
@@ -222,7 +229,7 @@ static void __init apply_alternatives_vdso(void)
 		.end	= (void *)hdr + alt->sh_offset + alt->sh_size,
 	};
 
-	__apply_alternatives(&region, false, &all_capabilities[0]);
+	__apply_alternatives(&region, false, false, &all_capabilities[0]);
 }
 
 static const struct alt_region kernel_alternatives __initconst = {
@@ -248,7 +255,7 @@ static int __init __apply_alternatives_multi_stop(void *unused)
 				  ARM64_NCAPS);
 
 		BUG_ON(all_alternatives_applied);
-		__apply_alternatives(&kernel_alternatives, false,
+		__apply_alternatives(&kernel_alternatives, false, false,
 				     remaining_capabilities);
 		/* Barriers provided by the cache flushing */
 		all_alternatives_applied = 1;
@@ -278,12 +285,12 @@ void __init apply_boot_alternatives(void)
 
 	pr_info("applying boot alternatives\n");
 
-	__apply_alternatives(&kernel_alternatives, false,
+	__apply_alternatives(&kernel_alternatives, false, false,
 			     &boot_cpucaps[0]);
 }
 
 #ifdef CONFIG_MODULES
-int apply_alternatives_module(void *start, size_t length)
+int apply_alternatives_module(void *start, size_t length, bool is_kage)
 {
 	struct alt_region region = {
 		.begin	= start,
@@ -293,7 +300,7 @@ int apply_alternatives_module(void *start, size_t length)
 
 	bitmap_fill(all_capabilities, ARM64_NCAPS);
 
-	return __apply_alternatives(&region, true, &all_capabilities[0]);
+	return __apply_alternatives(&region, true, is_kage, &all_capabilities[0]);
 }
 #endif
 

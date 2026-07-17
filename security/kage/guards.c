@@ -7,6 +7,7 @@
 #include <linux/printk.h>
 #include <linux/spinlock.h>
 #include <linux/slab.h>
+#include <linux/alloc_tag.h>
 #include <linux/device.h>
 #ifdef CONFIG_KUNIT
 #include <kunit/test.h>
@@ -188,10 +189,10 @@ static void *guard_devm_kmalloc(struct kage_proc *proc,
 }
 // FIXME: need corresponding realloc, free
 
-static unsigned long guard_kmalloc_trace(struct kage_proc *proc,
-					 struct kage_g2h_call *call,
-					 struct kmem_cache *s, gfp_t flags,
-					 size_t size)
+static unsigned long guard_kmalloc_cache_noprof(struct kage_proc *proc,
+						struct kage_g2h_call *call,
+						struct kmem_cache *s, gfp_t flags,
+						size_t size)
 {
 	return (unsigned long)kage_memory_alloc(proc->kage, size, MOD_DATA,
 						flags);
@@ -345,7 +346,10 @@ struct kage_g2h_call g2h_call_overrides[] = {
 	NAME_TO_GUARD_ENTRY(device_del),
 	NAME_TO_GUARD_ENTRY(device_unregister),
 	NAME_TO_GUARD_ENTRY(devm_kmalloc),
-	NAME_TO_GUARD_ENTRY(kmalloc_trace),
+	NAME_TO_GUARD_ENTRY(kmalloc_cache_noprof),
+	{ .name = "__kmalloc_cache_noprof",
+	  .guard_func = (unsigned long)guard_kmalloc_cache_noprof,
+	  .guard_func2 = 0, .stub = 0, .spec = NULL },
 	NAME_TO_GUARD_ENTRY(kfree),
 	NAME_TO_GUARD_ENTRY(sprintf),
 #ifdef CONFIG_KUNIT
@@ -439,8 +443,19 @@ static unsigned long kmalloc_caches_resolve(struct kage *kage)
 	return gvar_space_alloc(kage, sizeof(kmalloc_caches));
 }
 
-struct kage_gvar gvar_overrides[] = { { "kmalloc_caches",
-					kmalloc_caches_resolve, 0 } };
+#ifdef CONFIG_MEM_ALLOC_PROFILING
+static unsigned long mem_alloc_profiling_key_resolve(struct kage *kage)
+{
+	return gvar_space_alloc(kage, sizeof(mem_alloc_profiling_key));
+}
+#endif
+
+struct kage_gvar gvar_overrides[] = {
+	{ "kmalloc_caches", kmalloc_caches_resolve, 0 },
+#ifdef CONFIG_MEM_ALLOC_PROFILING
+	{ "mem_alloc_profiling_key", mem_alloc_profiling_key_resolve, 0 },
+#endif
+};
 
 static struct kage_gvar *find_gvar_override(const char *name)
 {

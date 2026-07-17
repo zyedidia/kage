@@ -31,9 +31,6 @@
 #include "proc.h"
 #include "guards.h"
 
-// Nic tmp
-#pragma clang optimize off
-
 static_assert(offsetof(struct kage_proc, kstackp) == KAGE_PROC_KSTACKP_OFFS,
 	      "Inconsistency between proc.h and kage_asm.h");
 static_assert(offsetof(struct kage_proc, sstackp) == KAGE_PROC_SSTACKP_OFFS,

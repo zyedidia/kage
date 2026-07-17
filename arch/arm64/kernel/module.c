@@ -27,9 +27,6 @@
 #include <asm/sections.h>
 #include <asm/text-patching.h>
 
-// Nic tmp (preserved from kage01 during 6.18 port)
-#pragma clang optimize off
-
 enum aarch64_reloc_op {
 	RELOC_OP_NONE,
 	RELOC_OP_ABS,
